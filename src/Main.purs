@@ -2,7 +2,7 @@ module Main where
 
 import Autocomplete as Autocomplete
 import Client as Client
-import Data.Array (fold, intercalate)
+import Data.Array (fold, foldMap, intercalate)
 import Data.Array as Array
 import Data.Foldable (traverse_)
 import Data.Int as Int
@@ -97,13 +97,15 @@ renderIndex refs =
 renderClass :: ∀ s. Class -> P.Element s Action
 renderClass class' =
   H.div'
-    [ H.h3'
+    [ foldMap renderSource $ Array.findMap (_.source) class'.methods
+    , H.h3'
       [ H.text $ class'.visibility
       , H.text " "
       , if class'.isNative then H.text "native " else mempty
       , H.text $ if class'.isStruct then "struct " else "class "
       , H.text class'.name
       ]
+    
     , renderBases class'.bases
     , if Array.length class'.fields > 0 then H.h4' [ H.text "fields" ] else mempty
     , H.ul [] $ renderField <$> class'.fields
@@ -121,6 +123,11 @@ renderClass class' =
             ]
         ]
     Nothing -> mempty
+
+  renderSource source =
+    let str = Array.head $ String.split (Pattern ".") source
+        path = "https://codeberg.org/adamsmasher/cyberpunk/src/branch/master/" <> fold str <> ".swift"
+    in H.a [ HP.href path ] [ H.text "[source]" ]
 
   renderField field =
     H.li'
