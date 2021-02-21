@@ -4,6 +4,7 @@ import Autocomplete as Autocomplete
 import Client as Client
 import Data.Array (fold, intercalate)
 import Data.Array as Array
+import Data.Foldable (traverse_)
 import Data.Int as Int
 import Data.Maybe (Maybe(..), maybe)
 import Data.String (Pattern(..))
@@ -13,12 +14,14 @@ import Effect.Aff (runAff_)
 import Effect.Aff.Class (liftAff)
 import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
-import Prelude (Unit, bind, const, discard, map, mempty, show, ($), (<$>), (<<<), (<>), (=<<), (>))
+import Prelude (Unit, bind, const, discard, map, mempty, pure, show, ($), (<$>), (<<<), (<>), (=<<), (>))
 import Prismatic as P
 import Prismatic.HTML (mount)
 import Prismatic.VDOM as H
 import Prismatic.VDOM.Props as HP
-import Types (Class, Definition(..), DefinitionIndex(..), Enum, Reference, Type(..), Method)
+import Types (Class, Definition(..), DefinitionIndex(..), Enum, Method, Reference, Type(..))
+import Web.Event.Event (EventType(..))
+import Web.Event.EventTarget as ET
 import Web.HTML as WE
 import Web.HTML.Location as L
 import Web.HTML.Window as W
@@ -38,17 +41,17 @@ data PageState
 main :: Effect Unit
 main =
   runAff_ (log <<< show) do
-    hash <- liftEffect $ L.hash =<< W.location =<< WE.window
+    maybeId <- liftEffect getCurrentBrowserRoute
     index <- Client.getIndex
-    case Int.fromString $ String.drop 1 hash of
+    state <- case maybeId of
       Just id -> do
-        definition <- Client.getDefinition (DefinitionIndex id)
-        liftEffect $ mount "main" (P.element app) { page: Loaded definition, index }
-      Nothing -> do
-        liftEffect $ mount "main" (P.element app) { page: Index, index }
+        definition <- Client.getDefinition id
+        pure { page: Loaded definition, index }
+      Nothing -> pure { page: Index, index }
+    liftEffect $ mount "main" (P.element app) state
 
 app :: P.Component AppState Action
-app = P.wired $ P.defaultSpec render performAction
+app = P.wired $ (P.defaultSpec render performAction) { componentDidMount = componentDidMount }
   where
   render state =
     H.div'
@@ -62,6 +65,15 @@ app = P.wired $ P.defaultSpec render performAction
     def <- liftAff $ Client.getDefinition index
     P.modify (_ { page = Loaded def })
   performAction _ LoadIndex = P.modify (_ { page = Index })
+
+  componentDidMount interp = liftEffect do
+    listener <- ET.eventListener (const $ interp onLocationChange)
+    target <- W.toEventTarget <$> WE.window
+    ET.addEventListener (EventType "hashchange") listener false target
+
+  onLocationChange = do
+    id <- liftEffect getCurrentBrowserRoute
+    traverse_ (P.dispatch <<< LoadDefinition) id
 
 renderPage :: ∀ s. AppState -> P.Element s Action
 renderPage { page, index } = case page of
@@ -113,9 +125,10 @@ renderClass class' =
           ]
       ]
 
-renderMethod :: ∀ s. Method -> P.Element s Action 
+renderMethod :: ∀ s. Method -> P.Element s Action
 renderMethod method =
-  let prettyName = Array.head (String.split (Pattern ";") method.name)
+  let
+    prettyName = Array.head (String.split (Pattern ";") method.name)
   in
     H.li [ HP.title method.name ]
       [ H.code'
@@ -149,7 +162,7 @@ renderType type' = printType type'
   printType (WeakRef { inner }) = printType inner
   printType (ScriptRef { inner }) = printType inner
   printType (Array { inner }) = H.text "array<" <> printType inner <> H.text ">"
-  printType (StaticArray { inner, size }) = printType inner <> H.text ("[" <> show size <> "]") 
+  printType (StaticArray { inner, size }) = printType inner <> H.text ("[" <> show size <> "]")
 
 renderEnum :: ∀ s. Enum -> P.Element s Action
 renderEnum enum =
@@ -198,3 +211,7 @@ renderLink name index =
       ]
       [ H.text name ]
 
+getCurrentBrowserRoute :: Effect (Maybe DefinitionIndex)
+getCurrentBrowserRoute = do
+  hash <- L.hash =<< W.location =<< WE.window
+  pure $ map DefinitionIndex $ Int.fromString $ String.drop 1 hash
