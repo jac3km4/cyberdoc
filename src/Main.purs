@@ -198,18 +198,11 @@ renderNav index =
   onOptionSelect option = do
     let DefinitionIndex id = option.index
     liftEffect $ L.setHash (show id) =<< W.location =<< WE.window
-    P.dispatch $ LoadDefinition option.index
 
 renderLink :: ∀ st. String -> DefinitionIndex -> P.Element st Action
 renderLink name index =
-  let
-    DefinitionIndex id = index
-  in
-    H.a
-      [ HP.href $ "#" <> show id
-      , HP.onClick $ const $ P.dispatch $ LoadDefinition index
-      ]
-      [ H.text name ]
+  let DefinitionIndex id = index
+  in H.a [ HP.href $ "#" <> show id ] [ H.text name ]
 
 getCurrentBrowserRoute :: Effect (Maybe DefinitionIndex)
 getCurrentBrowserRoute = do
