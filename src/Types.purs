@@ -66,6 +66,10 @@ type Class
     , bases :: Array Reference
     , fields :: Array Field
     , methods :: Array Method
+    , isAbstract :: Boolean
+    , isFinal :: Boolean
+    , isNative :: Boolean
+    , isStruct :: Boolean
     }
 
 type Field
