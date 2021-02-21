@@ -21,5 +21,5 @@ in  upstream
       , repo =
           "https://github.com/jac3km4/purescript-prismatic.git"
       , version =
-          "v0.1.0"
+          "update"
       }
