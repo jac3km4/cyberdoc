@@ -99,10 +99,10 @@ renderClass class' =
   H.div'
     [ foldMap renderSource $ Array.findMap (_.source) class'.methods
     , H.h3'
-      [ H.text $ class'.visibility
+      [ keyword class'.visibility
       , H.text " "
-      , if class'.isNative then H.text "native " else mempty
-      , H.text $ if class'.isStruct then "struct " else "class "
+      , if class'.isNative then keyword "native " else mempty
+      , keyword if class'.isStruct then "struct " else "class "
       , H.text class'.name
       ]
     
@@ -117,7 +117,7 @@ renderClass class' =
     Just { head, tail } ->
       H.dl'
         [ H.dd'
-            [ H.text "extends "
+            [ H.span [ HP.className "keyword" ] [ H.text "extends " ]
             , renderLink head.name head.index
             , renderBases tail
             ]
@@ -138,38 +138,43 @@ renderClass class' =
           ]
       ]
 
+  keyword text =
+    H.span [ HP.className "keyword" ] [ H.text text ]
+
 renderMethod :: ∀ s. Method -> P.Element s Action
 renderMethod method =
   let prettyName = Array.head (String.split (Pattern ";") method.name)
   in
     H.li [ HP.title method.name ]
       [ H.code'
-          [ H.text method.visibility
+          [ keyword method.visibility
           , H.text " "
-          , if method.isStatic then H.text "static " else mempty
-          , if method.isNative then H.text "native " else mempty
+          , if method.isStatic then keyword "static " else mempty
+          , if method.isNative then keyword "native " else mempty
           , H.text $ fold prettyName
           , H.text "("
           , intercalate (H.text ", ") $ renderParameter <$> method.parameters
           , H.text ")"
           , H.text ": "
-          , maybe (H.text "Void") renderType method.returnType
+          , maybe (H.span [ HP.className "type" ] [ H.text "Void" ]) renderType method.returnType
           ]
       ]
   where
   renderParameter param =
     H.span'
-      [ if param.isOptional then H.text "opt " else mempty
-      , if param.isOut then H.text "out " else mempty
+      [ if param.isOptional then keyword "opt " else mempty
+      , if param.isOut then keyword "out " else mempty
       , H.text param.name
       , H.text ": "
       , renderType param.type
       ]
+  keyword text =
+    H.span [ HP.className "keyword" ] [ H.text text ]
 
 renderType :: ∀ s. Type -> P.Element s Action
 renderType type' = printType type'
   where
-  printType (Basic { name }) = H.text name
+  printType (Basic { name }) = H.span [ HP.className "type" ] [ H.text name ]
   printType (Class { name, index }) = renderLink name index
   printType (Ref { inner }) = printType inner
   printType (WeakRef { inner }) = printType inner
@@ -180,7 +185,7 @@ renderType type' = printType type'
 renderEnum :: ∀ s. Enum -> P.Element s Action
 renderEnum enum =
   H.div'
-    [ H.h3' [ H.text $ "enum " <> enum.name ]
+    [ H.h3' [ H.span [ HP.className "keyword" ] [ H.text "enum " ] <> H.text enum.name ]
     , H.ul [] $ renderEnumValue <$> enum.members
     ]
   where
