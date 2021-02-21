@@ -18,13 +18,10 @@ import Prismatic as P
 import Prismatic.HTML (mount)
 import Prismatic.VDOM as H
 import Prismatic.VDOM.Props as HP
-import Types (Class, Definition(..), DefinitionIndex(..), Enum, Reference, Type(..))
+import Types (Class, Definition(..), DefinitionIndex(..), Enum, Reference, Type(..), Method)
 import Web.HTML as WE
 import Web.HTML.Location as L
 import Web.HTML.Window as W
-
-data ResetCounter
-  = ResetCounter
 
 data Action
   = LoadDefinition DefinitionIndex
@@ -72,7 +69,7 @@ renderPage { page, index } = case page of
     H.div [ HP.className "row" ]
       [ H.div [ HP.className "column column-50 column-offset-50" ] [ H.h3' [ H.text "Loading" ] ] ]
   Loaded (ClassDefinition class') -> renderClass class'
-  Loaded (FunctionDefinition fun) -> H.div' []
+  Loaded (FunctionDefinition fun) -> renderMethod fun
   Loaded (EnumDefinition enum) -> renderEnum enum
   Index -> renderIndex index
 
@@ -116,25 +113,29 @@ renderClass class' =
           ]
       ]
 
-  renderMethod method =
-    let prettyName = Array.head (String.split (Pattern ";") method.name)
-    in
-      H.li'
-        [ H.code'
-            [ H.text method.visibility
-            , H.text " "
-            , H.text $ fold prettyName
-            , H.text "("
-            , intercalate (H.text ", ") $ renderParameter <$> method.parameters
-            , H.text ")"
-            , H.text ": "
-            , maybe (H.text "Void") renderType method.returnType
-            ]
-        ]
-
+renderMethod :: ∀ s. Method -> P.Element s Action 
+renderMethod method =
+  let prettyName = Array.head (String.split (Pattern ";") method.name)
+  in
+    H.li [ HP.title method.name ]
+      [ H.code'
+          [ H.text method.visibility
+          , H.text " "
+          , if method.isStatic then H.text "static " else mempty
+          , H.text $ fold prettyName
+          , H.text "("
+          , intercalate (H.text ", ") $ renderParameter <$> method.parameters
+          , H.text ")"
+          , H.text ": "
+          , maybe (H.text "Void") renderType method.returnType
+          ]
+      ]
+  where
   renderParameter param =
     H.span'
-      [ H.text param.name
+      [ if param.isOptional then H.text "opt " else mempty
+      , if param.isOut then H.text "out " else mempty
+      , H.text param.name
       , H.text ": "
       , renderType param.type
       ]
@@ -147,8 +148,8 @@ renderType type' = printType type'
   printType (Ref { inner }) = printType inner
   printType (WeakRef { inner }) = printType inner
   printType (ScriptRef { inner }) = printType inner
-  printType (Array { inner }) = printType inner
-  printType (StaticArray { inner }) = printType inner
+  printType (Array { inner }) = H.text "array<" <> printType inner <> H.text ">"
+  printType (StaticArray { inner, size }) = printType inner <> H.text ("[" <> show size <> "]") 
 
 renderEnum :: ∀ s. Enum -> P.Element s Action
 renderEnum enum =
