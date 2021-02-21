@@ -97,7 +97,13 @@ renderIndex refs =
 renderClass :: ∀ s. Class -> P.Element s Action
 renderClass class' =
   H.div'
-    [ H.h3' [ H.text $ class'.visibility <> " class " <> class'.name ]
+    [ H.h3'
+      [ H.text $ class'.visibility
+      , H.text " "
+      , if class'.isNative then H.text "native " else mempty
+      , H.text $ if class'.isStruct then "struct " else "class "
+      , H.text class'.name
+      ]
     , renderBases class'.bases
     , if Array.length class'.fields > 0 then H.h4' [ H.text "fields" ] else mempty
     , H.ul [] $ renderField <$> class'.fields
@@ -127,14 +133,14 @@ renderClass class' =
 
 renderMethod :: ∀ s. Method -> P.Element s Action
 renderMethod method =
-  let
-    prettyName = Array.head (String.split (Pattern ";") method.name)
+  let prettyName = Array.head (String.split (Pattern ";") method.name)
   in
     H.li [ HP.title method.name ]
       [ H.code'
           [ H.text method.visibility
           , H.text " "
           , if method.isStatic then H.text "static " else mempty
+          , if method.isNative then H.text "native " else mempty
           , H.text $ fold prettyName
           , H.text "("
           , intercalate (H.text ", ") $ renderParameter <$> method.parameters
