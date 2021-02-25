@@ -2,9 +2,8 @@ module Main where
 
 import Autocomplete as Autocomplete
 import Client as Client
-import Data.Array (fold, foldMap, intercalate)
 import Data.Array as Array
-import Data.Foldable (traverse_)
+import Data.Foldable (fold, foldMap, intercalate, traverse_)
 import Data.Int as Int
 import Data.Maybe (Maybe(..), maybe)
 import Data.String (Pattern(..))
