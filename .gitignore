@@ -11,3 +11,4 @@
 /.cache
 /dist
 /prd/index.js
+/.parcel-cache/

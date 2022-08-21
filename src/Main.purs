@@ -18,7 +18,7 @@ import Prismatic as P
 import Prismatic.HTML (mount)
 import Prismatic.VDOM as H
 import Prismatic.VDOM.Props as HP
-import Types (Class, Definition(..), DefinitionIndex(..), Enum, Method, Reference, Type(..))
+import Types (Class, Definition(..), DefinitionIndex(..), Enum, Method, Reference, RedType(..))
 import Web.Event.Event (EventType(..))
 import Web.Event.EventTarget as ET
 import Web.HTML as WE
@@ -29,8 +29,7 @@ data Action
   = LoadDefinition DefinitionIndex
   | LoadIndex
 
-type AppState
-  = { page :: PageState, index :: Array Reference }
+type AppState = { page :: PageState, index :: Array Reference }
 
 data PageState
   = Loading
@@ -98,13 +97,13 @@ renderClass class' =
   H.div'
     [ foldMap renderSource $ Array.findMap (_.source) class'.methods
     , H.h3'
-      [ keyword class'.visibility
-      , H.text " "
-      , if class'.isNative then keyword "native " else mempty
-      , keyword if class'.isStruct then "struct " else "class "
-      , H.text class'.name
-      ]
-    
+        [ keyword class'.visibility
+        , H.text " "
+        , if class'.isNative then keyword "native " else mempty
+        , keyword if class'.isStruct then "struct " else "class "
+        , H.text class'.name
+        ]
+
     , renderBases class'.bases
     , if Array.length class'.fields > 0 then H.h4' [ H.text "fields" ] else mempty
     , H.ul [] $ renderField <$> class'.fields
@@ -124,9 +123,11 @@ renderClass class' =
     Nothing -> mempty
 
   renderSource source =
-    let str = Array.head $ String.split (Pattern ".") source
-        path = "https://codeberg.org/adamsmasher/cyberpunk/src/branch/master/" <> fold str <> ".swift"
-    in H.a [ HP.href path ] [ H.text "[source]" ]
+    let
+      str = Array.head $ String.split (Pattern ".") source
+      path = "https://codeberg.org/adamsmasher/cyberpunk/src/branch/master/" <> fold str <> ".swift"
+    in
+      H.a [ HP.href path ] [ H.text "[source]" ]
 
   renderField field =
     H.li'
@@ -142,7 +143,8 @@ renderClass class' =
 
 renderMethod :: ∀ s. Method -> P.Element s Action
 renderMethod method =
-  let prettyName = Array.head (String.split (Pattern ";") method.name)
+  let
+    prettyName = Array.head (String.split (Pattern ";") method.name)
   in
     H.li [ HP.title method.name ]
       [ H.code'
@@ -170,7 +172,7 @@ renderMethod method =
   keyword text =
     H.span [ HP.className "keyword" ] [ H.text text ]
 
-renderType :: ∀ s. Type -> P.Element s Action
+renderType :: ∀ s. RedType -> P.Element s Action
 renderType type' = printType type'
   where
   printType (Basic { name }) = H.span [ HP.className "type" ] [ H.text name ]
@@ -202,7 +204,7 @@ renderNav index =
         [ H.a [ HP.className "navigation-title", HP.onClick $ const $ P.dispatch LoadIndex ]
             [ H.text "Cyberdoc" ]
         , H.ul [ HP.className "navigation-list float-right" ]
-            [ H.li [ HP.className "navigation-item" ]
+            [ H.li [ HP.className "navigation-item search-bar" ]
                 [ H.section [ HP.className "column" ]
                     [ autocomplete ]
                 ]
@@ -218,8 +220,10 @@ renderNav index =
 
 renderLink :: ∀ st. String -> DefinitionIndex -> P.Element st Action
 renderLink name index =
-  let DefinitionIndex id = index
-  in H.a [ HP.href $ "#" <> show id ] [ H.text name ]
+  let
+    DefinitionIndex id = index
+  in
+    H.a [ HP.href $ "#" <> show id ] [ H.text name ]
 
 getCurrentBrowserRoute :: Effect (Maybe DefinitionIndex)
 getCurrentBrowserRoute = do

@@ -1,4 +1,3 @@
-const ReactSearchAutocomplete = require("react-search-autocomplete");
+import ReactSearchAutocomplete from "react-search-autocomplete";
 
-exports._component = ReactSearchAutocomplete.ReactSearchAutocomplete;
-
+export const _component = ReactSearchAutocomplete.ReactSearchAutocomplete;
